@@ -240,7 +240,6 @@ func (m watchMap) set(ino *inode, watch *watch) {
 
 // Must run within the I/O thread.
 func (w *Watcher) addWatch(pathname string, flags uint64) error {
-	log.Println("###############addWatch:", pathname)
 	dir, err := getDir(pathname)
 	if err != nil {
 		return err
@@ -317,7 +316,6 @@ func (w *Watcher) remWatch(pathname string) error {
 
 // Must run within the I/O thread.
 func (w *Watcher) deleteWatch(watch *watch) {
-	log.Println("#######################deleteWatch")
 	for name, mask := range watch.names {
 		if mask&provisional == 0 {
 			w.sendEvent(filepath.Join(watch.path, name), mask&sysFSIGNORED)
@@ -352,7 +350,6 @@ func (w *Watcher) startRead(watch *watch) error {
 		return nil
 	}
 
-	log.Println("#######################ReadDirectoryChanges")
 	e := syscall.ReadDirectoryChanges(watch.ino.handle, &watch.buf[0],
 		uint32(unsafe.Sizeof(watch.buf)), true, mask, nil, &watch.ov, 0)
 	if e != nil {
