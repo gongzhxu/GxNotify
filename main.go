@@ -3,39 +3,19 @@ package main
 import (
 	"fsnotify"
 	"log"
+	"time"
 )
 
+func Update(watchid string, oldfile string, newfile string, op string, filetype string) {
+	log.Printf("watchid=%s, oldfile=%s, newfile=%s, op=%s, filetype=%s\n", watchid, oldfile, newfile, op, filetype)
+}
+
 func main() {
-	watcher, err := fsnotify.NewWatcher("test")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer watcher.Close()
+	fsnotify.AddWatcher("test", "D:/test", Update)
+	fsnotify.AddWatcher("test2", "D:/test2", Update)
+	fsnotify.DelWatcher("test2")
 
-	done := make(chan bool)
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				log.Println("event:", event)
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					log.Println("modified file:", event.Name)
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				log.Println("error:", err)
-			}
-		}
-	}()
-
-	err = watcher.Add("D:/test2")
-	if err != nil {
-		log.Fatal(err)
+	for {
+		time.Sleep(time.Duration(5) * time.Second)
 	}
-	<-done
 }

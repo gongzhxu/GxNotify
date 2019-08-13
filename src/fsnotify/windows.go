@@ -9,7 +9,6 @@ package fsnotify
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,7 +30,7 @@ type Watcher struct {
 }
 
 // NewWatcher establishes a new watcher with the underlying OS and begins waiting for events.
-func NewWatcher(watchid string) (*Watcher, error) {
+func NewWatcher() (*Watcher, error) {
 	port, e := syscall.CreateIoCompletionPort(syscall.InvalidHandle, 0, 0, 0)
 	if e != nil {
 		return nil, os.NewSyscallError("CreateIoCompletionPort", e)
