@@ -8,10 +8,8 @@
 package fsnotify
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
 	"log"
+	"os"
 	"sync"
 )
 
@@ -33,62 +31,39 @@ const (
 	Chmod
 )
 
-func (op Op) String() string {
-	// Use a buffer for efficient string concatenation
-	var buffer bytes.Buffer
-
-	if op&Create == Create {
-		buffer.WriteString("|CREATE")
-	}
-	if op&Remove == Remove {
-		buffer.WriteString("|REMOVE")
-	}
-	if op&Write == Write {
-		buffer.WriteString("|WRITE")
-	}
-	if op&Rename == Rename {
-		buffer.WriteString("|RENAME")
-	}
-	if op&Chmod == Chmod {
-		buffer.WriteString("|CHMOD")
-	}
-	if buffer.Len() == 0 {
-		return ""
-	}
-	return buffer.String()[1:] // Strip leading pipe
+var noteDescription = map[Op]string{
+	Create: "create",
+	Remove: "delete",
+	Rename: "rename",
+	Write:  "change",
 }
 
-// String returns a string representation of the event in the form
-// "file: REMOVE|WRITE|..."
-func (e Event) String() string {
-	return fmt.Sprintf("%q: %s", e.Name, e.Op.String())
-}
-
-// Common errors that can be reported by a watcher
-var ErrEventOverflow = errors.New("fsnotify queue overflow")
-
-type Callback func(watchid string, oldfile string, newfile string, operator string, fileType string)
+type Callback func(watchid string, oldfile string, newfile string, op string, filetype string)
 
 var watcherMutex sync.Mutex
 var watcherMap = make(map[string]*Watcher)
 
 func AddWatcher(watchid string, path string, cb Callback) {
-	var watcher *Watcher
-	var err error
-
 	watcherMutex.Lock()
+	defer watcherMutex.Unlock()
+
 	_, ok := watcherMap[watchid]
 	if ok {
 		return
-	} else {
-		watcher, err = NewWatcher()
-		if err != nil {
-			return
-		}
-
-		watcherMap[watchid] = watcher
 	}
-	watcherMutex.Unlock()
+
+	watcher, err := NewWatcher()
+	if err != nil {
+		return
+	}
+
+	err = watcher.Add(path)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	watcherMap[watchid] = watcher
 
 	go func() {
 		var lastevent Event
@@ -99,28 +74,34 @@ func AddWatcher(watchid string, path string, cb Callback) {
 					return
 				}
 
-				if event.Op != Rename {
-					if lastevent.Op == Rename && event.Op == Create {
-						cb(watchid, lastevent.Name, event.Name, lastevent.Op.String(), "")
+				filetype := getFileType(event.Name)
+
+				if event.Op&Rename != Rename {
+					if lastevent.Op&Rename == Rename && event.Op&Create == Create {
+						cb(watchid, lastevent.Name, event.Name, noteDescription[Rename], filetype)
 					} else {
-						cb(watchid, event.Name, "", event.Op.String(), "")
+						if lastevent.Op&Create == Create {
+							cb(watchid, event.Name, "", noteDescription[Create], filetype)
+						}
+
+						if lastevent.Op&Remove == Remove {
+							cb(watchid, event.Name, "", noteDescription[Remove], filetype)
+						}
+
+						if lastevent.Op&Write == Write {
+							cb(watchid, event.Name, "", noteDescription[Write], filetype)
+						}
 					}
 				}
 
 				lastevent = event
-			case err, ok := <-watcher.Errors:
+			case _, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Println("error:", err)
 			}
 		}
 	}()
-
-	err = watcher.Add(path)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func DelWatcher(watchid string) {
@@ -130,4 +111,17 @@ func DelWatcher(watchid string) {
 	if ok {
 		watcher.Close()
 	}
+}
+
+func getFileType(path string) string {
+	f, err := os.Stat(path)
+	if err != nil {
+		return "0"
+	}
+
+	if f.IsDir() {
+		return "1"
+	}
+
+	return "0"
 }
