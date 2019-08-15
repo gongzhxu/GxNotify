@@ -97,6 +97,7 @@ func DelWatcher(watchid string) {
 	es, ok := watcherMap[watchid]
 	if ok {
 		es.Stop()
+		delete(watcherMap, watchid)
 	}
 }
 

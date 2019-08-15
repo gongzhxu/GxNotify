@@ -110,6 +110,7 @@ func DelWatcher(watchid string) {
 	watcher, ok := watcherMap[watchid]
 	if ok {
 		watcher.Close()
+		delete(watcherMap, watchid)
 	}
 }
 
