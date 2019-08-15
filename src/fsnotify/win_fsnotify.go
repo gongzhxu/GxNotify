@@ -84,12 +84,12 @@ func AddWatcher(watchid string, path string, cb Callback) {
 							cb(watchid, event.Name, "", noteDescription[Create], filetype)
 						}
 
-						if lastevent.Op&Remove == Remove {
-							cb(watchid, event.Name, "", noteDescription[Remove], filetype)
-						}
-
 						if lastevent.Op&Write == Write {
 							cb(watchid, event.Name, "", noteDescription[Write], filetype)
+						}
+
+						if lastevent.Op&Remove == Remove {
+							cb(watchid, event.Name, "", noteDescription[Remove], filetype)
 						}
 					}
 				}

@@ -139,12 +139,12 @@ func handleEvent(watchid string, cb Callback, event Event) {
 		cb(watchid, event.Path, "", noteDescription[ItemCreated], filetype)
 	}
 
-	if event.Flags&ItemRemoved == ItemRemoved {
-		cb(watchid, event.Path, "", noteDescription[ItemRemoved], filetype)
-	}
-
 	if event.Flags&ItemModified == ItemModified {
 		cb(watchid, event.Path, "", noteDescription[ItemModified], filetype)
+	}
+
+	if event.Flags&ItemRemoved == ItemRemoved {
+		cb(watchid, event.Path, "", noteDescription[ItemRemoved], filetype)
 	}
 }
 
